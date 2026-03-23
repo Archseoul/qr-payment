@@ -5,6 +5,14 @@
   "observability": {
     "enabled": true
   },
+  "env": {
+    "stage": {
+      "name": "qr-payment-stage"   // staging Worker 이름
+    },
+    "dev": {
+      "name": "qr-payment-dev"       // dev Worker 이름
+    }
+  },
   "main": "./.output/server/index.mjs",
   "assets": {
     "binding": "ASSETS",
