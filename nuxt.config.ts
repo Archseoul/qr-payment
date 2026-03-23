@@ -2,10 +2,16 @@
 export default defineNuxtConfig({
   ssr: false,
   nitro: {
-    preset: 'static',
+    preset: "cloudflare_module",
+
     prerender: {
       autoSubfolderIndex: false,
       crawlLinks: true
+    },
+
+    cloudflare: {
+      deployConfig: true,
+      nodeCompat: true
     }
   },
   router: {
@@ -31,7 +37,7 @@ export default defineNuxtConfig({
     compatibilityVersion: 3
   },
   css: ['@/assets/custom.scss', '@/assets/pretendard.css'],
-  modules: ['nuxt-quasar-ui', '@pinia/nuxt', 'dayjs-nuxt', '@element-plus/nuxt', '@nuxtjs/i18n'],
+  modules: ["nitro-cloudflare-dev"],
 
   runtimeConfig: {
     public: {
