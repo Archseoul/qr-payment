@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   ssr: false,
   nitro: {
-    preset: "cloudflare_module",
+    preset: 'cloudflare_module',
 
     prerender: {
       autoSubfolderIndex: false,
@@ -37,7 +37,14 @@ export default defineNuxtConfig({
     compatibilityVersion: 3
   },
   css: ['@/assets/custom.scss', '@/assets/pretendard.css'],
-  modules: ["nitro-cloudflare-dev"],
+  modules: [
+    'nitro-cloudflare-dev',
+    '@pinia/nuxt',
+    '@nuxtjs/i18n',
+    'nuxt-quasar-ui',
+    'dayjs-nuxt',
+    '@element-plus/nuxt'
+  ],
 
   runtimeConfig: {
     public: {
