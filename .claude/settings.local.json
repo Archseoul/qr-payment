@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(grep -E '\"\"vue|dependencies\"\"' package.json)",
-      "Bash(node -e \"const p=require\\(''./node_modules/vue-i18n/package.json''\\); console.log\\(''vue-i18n:'', p.version\\)\")"
+      "Bash(node -e \"const p=require\\(''./node_modules/vue-i18n/package.json''\\); console.log\\(''vue-i18n:'', p.version\\)\")",
+      "WebFetch(domain:developers.cloudflare.com)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }
