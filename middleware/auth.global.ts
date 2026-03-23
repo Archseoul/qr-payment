@@ -1,3 +1,4 @@
+import { Notify } from 'quasar'
 import { storeToRefs } from 'pinia'
 import { useAuthStore } from '~/store/auth'
 import { nonSecurityUrl } from '~/utils/code'
@@ -8,7 +9,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // process.client 체크로 클라이언트 사이드에서만 실행
   if (import.meta.server) { return }
 
-  const $q = useQuasar()
   const authStore = useAuthStore()
   const token = useCookie('token', {
     default: () => null,
@@ -68,7 +68,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
     const auth = menuAuthCheck(currentSubMenu.subMenu.menuCode)
     const hasAllPermissions = auth.R()
     if (!hasAllPermissions) {
-      $q.notify({
+      Notify.create({
         color: 'negative',
         message: '접근 권한이 없습니다.',
         position: 'top',
