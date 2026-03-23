@@ -49,6 +49,7 @@
         "@vue-pdf-viewer/viewer": "^3.6.2",
         "chart.js": "^4.5.1",
         "chartjs-plugin-datalabels": "^2.2.0",
+        "commander": "^13.1.0",
         "crypto-js": "^4.1.1",
         "is-electron": "^2.2.2",
         "lodash-es": "^4.17.21",
