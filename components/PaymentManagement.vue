@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watchEffect, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import type { PropType } from 'vue'
 import isElectron from 'is-electron'
 import type { ShopInfoVo } from '~/types'
@@ -7,6 +7,8 @@ import { useAuthStore } from '~/store/auth'
 import app from '~/app.vue'
 import CustomToggle from '@/components/CustomToggle.vue'
 import { useQrPaymentStore } from '~/store/qrPaymentStore'
+
+const sidebarMiniState = inject<Ref<boolean>>('sidebarMiniState', ref(true))
 
 // Electron API 타입 선언
 declare global {
@@ -245,7 +247,6 @@ const connectToSSE = () => {
     eventSource.onerror = () => {
       sseConnectionStatus.value = 'disconnected'
 
-      // 자동 재연결 시도
       if (sseReconnectAttempts.value < maxReconnectAttempts) {
         sseReconnectAttempts.value++
         // 3초 후 재연결 시도
@@ -256,7 +257,6 @@ const connectToSSE = () => {
       }
     }
 
-    // 연결 종료 이벤트 핸들러
     eventSource.addEventListener('close', () => {
       sseConnectionStatus.value = 'disconnected'
     })
@@ -322,15 +322,22 @@ const fetchPaymentList = async () => {
   }
 }
 
-watchEffect(() => {
-  if (props.shopInfo?.shopCode) {
-    fetchPaymentList()
-    connectToSSE()
-  } else {
-    paymentList.value = []
-    disconnectSSE()
-  }
-})
+// shopInfo 변경 시 1회만 실행
+watch(
+  () => props.shopInfo?.shopCode,
+  (newCode, oldCode) => {
+    if (newCode) {
+      fetchPaymentList()
+      if (newCode !== oldCode) {
+        connectToSSE()
+      }
+    } else {
+      paymentList.value = []
+      disconnectSSE()
+    }
+  },
+  { immediate: true }
+)
 
 // 계산기 상태
 const calculatorValue = ref('0')
@@ -658,13 +665,6 @@ defineExpose({
 
 <template>
   <div class="payment-wrapper">
-    <!-- <PaymentClosedOverlay
-      v-if="props.isShopOpen === undefined"
-      :show="!isShopOpen"
-      :is-embedded="!props.isFullscreen"
-      @update:status="handleShopStatusChanged"
-    /> -->
-
     <div ref="paymentContainer" class="payment-container">
       <Transition name="payment-toast">
         <div v-if="isPaymentWindow && showPaymentToast" class="payment-status-toast">
@@ -736,7 +736,7 @@ defineExpose({
         </div>
       </div>
 
-      <div class="calculator-panel">
+      <div class="calculator-panel" :class="{ 'calculator-panel--hidden': !sidebarMiniState }">
         <Transition name="qr-overlay-fade">
           <div v-if="!qrPaymentEnabled && !showQrConfirmModal" class="qr-closed-overlay">
             <img src="/lock.svg" alt="lock" class="qr-lock-icon" />
@@ -977,9 +977,15 @@ defineExpose({
 
 .filter-tabs {
   display: flex;
-  gap: 9px;
+  gap: 7px;
   padding: 20px 20px 0;
   background-color: #F2F4F6;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .filter-tab {
@@ -994,6 +1000,11 @@ defineExpose({
   letter-spacing: -0.35px;
   background: transparent;
   border-bottom: 2px solid transparent;
+
+  @media (max-width: 800px) {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
 
   &:hover {
     border-bottom: 2px solid #ff8b4a;
@@ -1053,40 +1064,22 @@ defineExpose({
   padding-right: 10px;
   grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
 
-  &--modal {
-    grid-template-columns: repeat(2, 1fr);
+  // 아이뮤즈 뮤패드 8인치 (800px 세로, 1280px 가로) — 카드 3열
+  @media (max-width: 1280px) {
+    grid-template-columns: repeat(3, 1fr);
     gap: 12px;
+  }
 
-    .table-info {
-      .table-label {
-        font-size: 12px;
-      }
-      .table-number {
-        font-size: 12px;
-      }
-    }
+  // 아이패드 미니 세로모드 / 아이뮤즈 세로모드 (800px 이하) — 카드 2열
+  @media (max-width: 800px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
 
-    .status-badge {
-      padding: 3px 7px;
-      font-size: 11px;
-    }
-
-    .card-body {
-      .amount {
-        font-size: 14px;
-      }
-
-      .order-info {
-        .time {
-          font-size: 11px;
-        }
-
-        .detail-button {
-          padding: 3px 8px;
-          font-size: 12px;
-        }
-      }
-    }
+  // 700px 이하 — 카드 1열
+  @media (max-width: 700px) {
+    grid-template-columns: repeat(1, 1fr);
+    gap: 10px;
   }
 
   &::-webkit-scrollbar {
@@ -1104,8 +1097,17 @@ defineExpose({
 }
 
 .payment-card {
-  // width: 215px;
   background: white;
+
+  @media (max-width: 800px) {
+    padding: 10px 10px 8px;
+
+    .table-info { font-size: 13px; }
+    .status-badge { font-size: 10px; padding: 3px 5px; }
+    .card-body .amount { font-size: 14px; }
+    .card-body .order-info .time { font-size: 11px; }
+    .card-body .order-info .detail-button { font-size: 10px; padding: 3px 6px; }
+  }
 
   &.canceled {
     background: #F2F4F6;
@@ -1245,6 +1247,28 @@ defineExpose({
   padding: 20px 24px;
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
+  transition: width 0.3s ease, padding 0.3s ease, opacity 0.3s ease;
+
+  // 아이뮤즈 가로모드 (1280px)
+  @media (max-width: 1280px) {
+    width: 270px;
+    padding: 16px 18px;
+  }
+
+  // 아이패드 미니 세로 / 아이뮤즈 세로 (800px)
+  @media (max-width: 800px) {
+    width: 240px;
+    padding: 14px 14px;
+  }
+
+  &--hidden {
+    width: 0;
+    padding: 0;
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+  }
 }
 
 .logout-confirm-overlay {
@@ -1643,7 +1667,7 @@ defineExpose({
   padding: 16px;
   border: none;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;

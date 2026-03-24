@@ -48,7 +48,14 @@ const browserLogin = async () => {
 
     // 상태 업데이트 완료 대기
     await nextTick()
-    await router.push('/')
+
+    const userInfoData = data as AdminMemberVo
+    const shopCode = userInfoData.shopInfo?.shopCode || null
+    if (shopCode) {
+      await router.push(`/order/desktop/${shopCode}`)
+    } else {
+      await router.push('/login')
+    }
   } else {
     $q.dialog({
       title: $t('LOGIN.006'),

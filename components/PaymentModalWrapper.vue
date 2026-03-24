@@ -99,21 +99,8 @@ const handleClose = () => {
 
 <template>
   <div class="payment-wrapper">
-    <!-- 매장 닫힘 상태일 때 오버레이 - modal 모드일 때 -->
-    <!-- <PaymentClosedOverlay
-      v-if="!props.fullscreen"
-      :show="!isShopOpen"
-      @update:status="handleShopStatusChanged"
-    /> -->
-
     <!-- 기존 결제 화면 -->
     <div :class="props.fullscreen ? 'payment-fullscreen' : 'payment-modal'">
-      <!-- 매장 닫힘 상태일 때 오버레이 - fullscreen일 때 -->
-      <!-- <PaymentClosedOverlay
-        v-if="props.fullscreen"
-        :show="!isShopOpen"
-        @update:status="handleShopStatusChanged"
-      /> -->
       <ClientOnly>
         <PaymentManagement
           v-if="shopInfo"
@@ -174,8 +161,7 @@ const handleClose = () => {
   z-index: 9999;
   background-color: #ffffff;
   overflow: hidden;
-  
-  /* 오버레이 위치 기준점 */
+
   & > .shop-closed-overlay {
     position: absolute;
   }

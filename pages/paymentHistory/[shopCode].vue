@@ -2,15 +2,12 @@
 import customParseFormat from 'dayjs/plugin/customParseFormat'
 import useDayjs from 'dayjs'
 import type { QTableProps } from 'quasar'
-import type { PrinterVo } from '~/types'
 
 const dayjs = useDayjs
 dayjs.extend(customParseFormat)
 
 const $q = useQuasar()
 const route = useRoute()
-const isElectron = ref(false)
-onMounted(() => { isElectron.value = !!(window as any).electronAPI })
 
 const scrollTable = (direction: 'left' | 'right') => {
   const el = document.querySelector('.q-table__middle.scroll')
@@ -82,12 +79,6 @@ const isSummaryLoading = ref(false)
 const isReprinting = ref(false)
 const summaryData = ref<PaymentSummary | null>(null)
 
-// ShopStatusButtons의 shopPrinterData와 동일한 방식으로 프린터 목록 조회
-const { data: printerData } = await useCustomFetch<PrinterVo[]>(
-  `/admin/handOrder/shop/${route.params.shopCode}/printer`,
-  { method: 'GET', headers: { 'Content-Type': 'application/json' } }
-)
-
 const openReprintModal = async () => {
   summaryData.value = null
   showReprintModal.value = true
@@ -110,37 +101,6 @@ const openReprintModal = async () => {
 const closeReprintModal = () => {
   showReprintModal.value = false
 }
-
-// ShopStatusButtons의 handleShopClose 출력 로직과 동일
-const onReprint = async () => {
-  if (isReprinting.value || !summaryData.value) { return }
-  isReprinting.value = true
-  try {
-    const startDate = `${dateRange.value.from} 00:00:00`
-    const endDate = `${dateRange.value.to} 23:59:59`
-    const summary = await customFetch(
-      `/admin/handOrder/shop/${route.params.shopCode}/payments/summary`,
-      { method: 'GET', headers: { 'Content-Type': 'application/json' }, params: { startDate, endDate } }
-    )
-    const orderReceiptPrinterList = (printerData.value ?? []).filter(
-      (printer: PrinterVo) => printer.orderReceipt === true
-    )
-    const data = {
-      ...(typeof summary === 'object' && summary !== null ? summary : {}),
-      printerList: orderReceiptPrinterList
-    }
-    if (window.electronAPI && typeof (window.electronAPI as any).printPaymentSummary === 'function') {
-      ;(window.electronAPI as any).printPaymentSummary(JSON.stringify(data))
-    }
-    closeReprintModal()
-  } catch (e) {
-    console.error('재출력 실패:', e)
-    $q.notify({ type: 'negative', message: '재출력 요청에 실패했습니다.' })
-  } finally {
-    isReprinting.value = false
-  }
-}
-// ─────────────────────────────────────────────────────────────────────────────
 
 const onCancel = async (row: PaymentHistoryItem) => {
   try {
@@ -175,20 +135,6 @@ const columns: QTableProps['columns'] = [
     style: 'width: 50px'
   },
   {
-    name: 'shopCode',
-    label: '매장 코드',
-    field: (row: PaymentHistoryItem) => row.shopCode,
-    align: 'center',
-    style: 'width: 120px'
-  },
-  {
-    name: 'shopName',
-    label: '매장명',
-    field: (row: PaymentHistoryItem) => row.shopName,
-    align: 'center',
-    style: 'width: 150px'
-  },
-  {
     name: 'paymentDate',
     label: '결제일',
     field: (row: PaymentHistoryItem) => row.paymentDate ?? '',
@@ -208,13 +154,6 @@ const columns: QTableProps['columns'] = [
     field: (row: PaymentHistoryItem) => row.paymentType,
     align: 'center',
     style: 'width: 120px'
-  },
-  {
-    name: 'menuName',
-    label: '판매 상품명',
-    field: (row: PaymentHistoryItem) => row.menuName,
-    align: 'center',
-    style: 'width: 200px'
   },
   {
     name: 'paymentAmount',
@@ -264,20 +203,20 @@ const columns: QTableProps['columns'] = [
                   v-model="dateRange.from"
                   type="date"
                   style="border: 1px solid #c0c0c0; border-radius: 4px; padding: 10px 12px; font-size: 14px; outline: none;"
-                />
+                ></input>
                 <span style="color: #888;">~</span>
                 <input
                   v-model="dateRange.to"
                   type="date"
                   style="border: 1px solid #c0c0c0; border-radius: 4px; padding: 10px 12px; font-size: 14px; outline: none;"
-                />
+                ></input>
               </div>
             </q-item-section>
 
             <q-item-section side>
               <div class="flex q-gutter-sm">
                 <q-btn label="조회" color="primary" @click="search" />
-                <q-btn v-if="isElectron" label="정산 현황보기" color="orange" outline @click="openReprintModal" />
+                <q-btn label="정산 현황보기" color="orange" outline @click="openReprintModal" />
               </div>
             </q-item-section>
           </q-item>
@@ -316,7 +255,7 @@ const columns: QTableProps['columns'] = [
     </div>
 
     <Teleport to="body">
-      <template v-if="isElectron">
+      <template>
         <button class="tbl-nav-btn tbl-nav-btn--left" @click="scrollTable('left')">
           &#8249;
         </button>
@@ -380,20 +319,9 @@ const columns: QTableProps['columns'] = [
             데이터를 불러오지 못했습니다.
           </div>
 
-          <div class="sm-divider" />
-
           <div class="sm-footer">
             <button class="sm-btn sm-btn--cancel" type="button" @click="closeReprintModal">
-              취소
-            </button>
-            <button
-              class="sm-btn sm-btn--reprint"
-              type="button"
-              :disabled="isReprinting || !summaryData"
-              @click="onReprint"
-            >
-              <span v-if="isReprinting" class="sm-spinner" />
-              <span v-else>재출력</span>
+              닫기
             </button>
           </div>
         </div>
@@ -403,6 +331,11 @@ const columns: QTableProps['columns'] = [
 </template>
 
 <style scoped lang="scss">
+.main-content {
+  padding: 20px 21px;
+  background: #fff;
+}
+
 .sm-overlay {
   position: fixed;
   inset: 0;

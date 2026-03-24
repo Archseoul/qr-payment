@@ -37,7 +37,13 @@ export default defineNuxtConfig({
     compatibilityVersion: 3
   },
   css: ['@/assets/custom.scss', '@/assets/pretendard.css'],
-  modules: ["nitro-cloudflare-dev"],
+  modules: [
+    "@pinia/nuxt",
+    "@nuxtjs/i18n",
+    "dayjs-nuxt",
+    "nuxt-quasar-ui",
+    "nitro-cloudflare-dev",
+  ],
 
   runtimeConfig: {
     public: {

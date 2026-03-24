@@ -866,7 +866,6 @@ onMounted(() => {
   font-weight: 600;
   line-height: normal;
   margin: 0 auto;
-  padding-top: 22px;
   .menu-title {
     color: #5c5c5c;
   }
