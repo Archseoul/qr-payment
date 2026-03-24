@@ -1,17 +1,5 @@
 <script setup lang="ts">
 const route = useRoute()
-const closeApp = () => {
-  window?.electronAPI.closeApp('close-app')
-}
-
-const maxApp = () => {
-  window.electronAPI.maxApp('max-app')
-}
-
-const minApp = () => {
-  window.electronAPI.minApp('min-app')
-}
-
 </script>
 
 <template>
@@ -21,12 +9,6 @@ const minApp = () => {
         <q-toolbar-title>
           <q-img src="desktop_handorder_logo.png" width="113px" height="15px" />
         </q-toolbar-title>
-
-        <div class="q-pa-none icon-wrap">
-          <q-btn icon="remove" @click="minApp" />
-          <q-btn icon="filter_none" @click="maxApp" />
-          <q-btn icon="close" @click="closeApp" />
-        </div>
       </q-toolbar>
     </q-header>
     <q-page-container class="main-container">

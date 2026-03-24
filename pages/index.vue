@@ -13,7 +13,7 @@ onMounted(async () => {
     await nextTick()
   }
 
-  // shopCode 기반으로 QR 결제 페이지로 리디렉트
+  // QR 결제 페이지로 리디렉트
   const shopCode = userInfo.value?.shopInfo?.shopCode || null
   if (shopCode) {
     await router.replace(`/order/desktop/${shopCode}`)

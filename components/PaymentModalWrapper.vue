@@ -2,18 +2,6 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 import type { ShopInfoVo } from '~/types'
 
-// Electron API 타입 선언
-declare global {
-  interface Window {
-    electronAPI?: {
-      minApp: (event: string) => void
-      maxApp: (event: string) => void
-      closeApp: (event: string) => void
-      logoutApp: () => void
-    }
-  }
-}
-
 interface Props {
   shopInfo: ShopInfoVo | null
   fullscreen?: boolean
@@ -52,19 +40,6 @@ watch(
   { immediate: true }
 )
 
-// PaymentManagement 컴포넌트 참조
-const paymentManagementRef = ref<any>(null)
-
-// 매장 상태 변경 후 재조회
-const handleShopStatusChanged = async () => {
-  await refreshShopOpenStatus()
-
-  // PaymentManagement의 fetchPaymentList만 직접 호출 (무한 루프 방지)
-  if (paymentManagementRef.value && typeof paymentManagementRef.value.fetchPaymentList === 'function') {
-    await paymentManagementRef.value.fetchPaymentList()
-  }
-}
-
 const updateWindowWidth = () => {
   if (typeof window !== 'undefined') {
     windowWidth.value = window.innerWidth
@@ -90,9 +65,6 @@ const elementHeight = (element: any) => {
 }
 
 const handleClose = () => {
-  if (typeof window !== 'undefined' && window.electronAPI) {
-    window.electronAPI.minApp('min-app')
-  }
   emit('close')
 }
 </script>
@@ -104,7 +76,6 @@ const handleClose = () => {
       <ClientOnly>
         <PaymentManagement
           v-if="shopInfo"
-          ref="paymentManagementRef"
           :element-height="elementHeight"
           :shop-info="shopInfo"
           :show-top-bar="windowWidth < 900"

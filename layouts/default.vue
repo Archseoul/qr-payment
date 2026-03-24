@@ -145,6 +145,7 @@ nuxtApp.hook('page:finish', () => { loading.value = false })
   font-weight: 600;
   line-height: normal;
   margin: 0 auto;
+  padding: 0;
 
   .menu-title {
     color: #5c5c5c;

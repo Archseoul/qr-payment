@@ -108,18 +108,6 @@ export const allMenuList = [
       }
     ]
   },
-  /*  {
-    menuId: 'authManagement',
-    menuName: '권한 관리',
-    icon: 'svguse:/icons.svg#menu-1',
-    iconActiveClass: 'stroke-handorder',
-    iconNonActiveClass: 'stroke-black',
-    iconMiniActiveClass: 'stroke-white',
-    auth: ['admin'],
-    expanded: false,
-    to: '/auth',
-    menuList: []
-  }, */
   {
     menuId: 'shopManagement',
     menuName: 'SIDE_MENU.007',
@@ -208,13 +196,7 @@ export const allMenuList = [
         auth: ['admin'],
         to: '/waiting/setting',
         menuCode: '8100'
-      }/*,
-      {
-        menuName: '웨이팅 관리',
-        auth: ['admin'],
-        to: '/waiting/management',
-        menuCode: '8200'
-      } */
+      }
     ]
   },
   {
@@ -1124,7 +1106,6 @@ export const businessTypeOption = [
 export const paymentMethodCode:Record<PaymentMethod, string> = {
   KKP: '카카오페이', NVP: '네이버페이', PAC: '페이코', '': '카드'
 }
-
 
 export const receiptTypeOption = [
   { value: '', label: '선택안함' },

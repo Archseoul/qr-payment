@@ -62,7 +62,6 @@ const search = async () => {
   await paymentHistoryData.refresh()
 }
 
-// ── 정산 현황 모달 ──────────────────────────────────────────────────────────
 interface PaymentSummary {
   shopName: string
   openDate: string
@@ -76,7 +75,6 @@ interface PaymentSummary {
 
 const showReprintModal = ref(false)
 const isSummaryLoading = ref(false)
-const isReprinting = ref(false)
 const summaryData = ref<PaymentSummary | null>(null)
 
 const openReprintModal = async () => {
@@ -216,7 +214,7 @@ const columns: QTableProps['columns'] = [
             <q-item-section side>
               <div class="flex q-gutter-sm">
                 <q-btn label="조회" color="primary" @click="search" />
-                <q-btn label="정산 현황보기" color="orange" outline @click="openReprintModal" />
+                <q-btn label="정산 현황보기" color="primary" outline @click="openReprintModal" />
               </div>
             </q-item-section>
           </q-item>
@@ -274,15 +272,10 @@ const columns: QTableProps['columns'] = [
               &times;
             </button>
           </div>
-
           <div class="sm-divider" />
-
-          <!-- 로딩 -->
           <div v-if="isSummaryLoading" class="sm-loading">
             <q-spinner color="primary" size="36px" />
           </div>
-
-          <!-- 데이터 -->
           <div v-else-if="summaryData" class="sm-body">
             <div class="sm-meta">
               <div style="display: flex; align-items: center;">
@@ -296,7 +289,7 @@ const columns: QTableProps['columns'] = [
                 <span class="sm-label">전체 결제 건수</span>
                 <span class="sm-value">{{ summaryData.totalCount.toLocaleString() }}건</span>
               </div>
-              <div class="sm-row">
+              <div class="sm-row sm-row--highlight">
                 <span class="sm-label">결제 완료 건수</span>
                 <span class="sm-value sm-value--positive">{{ summaryData.completeCount.toLocaleString() }}건</span>
               </div>
@@ -450,8 +443,7 @@ const columns: QTableProps['columns'] = [
   font-weight: 700;
   color: #1a1a1a;
 
-  &--positive { color: rgb(2, 111, 42); }
-  &--negative { color: rgb(255, 39, 43); }
+  &--positive { color: #ff8b4a }
 }
 
 .sm-error {

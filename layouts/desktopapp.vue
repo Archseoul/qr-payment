@@ -1,60 +1,32 @@
 <script setup lang="ts">
-import isElectron from 'is-electron'
 import useDayjs from 'dayjs'
 import { isEmpty } from 'lodash-es'
-import type { Ref } from 'vue'
 import { desktopAppMenuList } from '~/utils/code'
 import { useAuthStore } from '~/store/auth'
-import type {
-  HoDesktopOrderVo,
-  HoPgOrderVo,
-  HoPrintLogGroupVo,
-  HoPrintLogVo,
-  HoSalesVo,
-  PrinterVo,
-  ShopInfoVo
-} from '~/types'
 import app from '~/app.vue'
-import { useCustomFetch } from '~/composables/useCustomFetch'
-import { priceToCurrency } from '~/composables/priceToCurrency'
-import NewOrderButton from '~/components/order-popup/NewOrderButton.vue'
 import { useOrderListStore } from '~/store/orderListStore'
 import { useShopInfoStore } from '~/store/shopInfoStore'
-import { useShopPrintStore } from '~/store/shopPrintStore'
-import { resetPgOrderSSE } from '~/composables/usePgOrderSSE'
 import { useQrPaymentStore } from '~/store/qrPaymentStore'
-import CustomToggle from '~/components/CustomToggle.vue'
 const { logUserOut, userInfo } = useAuthStore(app.$pinia)
 
 const route = useRoute()
 const router = useRouter()
-const $q = useQuasar()
-
-const dayjs = useDayjs
 const menuList = ref(desktopAppMenuList)
 const tabMenuList = ref([])
 const leftDrawerOpen = ref(false)
-const orderStatus = ref('success')
 const orderPopup = ref(false)
 const { newOrderList } = storeToRefs(useOrderListStore())
-const { setOrder, setNewOrderList, addNewOrder, removeFirstOrder } = useOrderListStore()
+const { setOrder, removeFirstOrder } = useOrderListStore()
 
 const { fetchShopInfo } = useShopInfoStore()
 fetchShopInfo(route.params.shopCode as string)
 
-const { fetchShopPrint } = useShopPrintStore()
-fetchShopPrint(route.params.shopCode as string)
-
-const { shopPrint } = storeToRefs(useShopPrintStore())
 const { shopInfo } = storeToRefs(useShopInfoStore())
 
 // QR 결제 store
 const qrPaymentStore = useQrPaymentStore()
 const { qrPaymentEnabled, showQrConfirmModal, showPaymentToast, paymentToastMessage } = storeToRefs(qrPaymentStore)
 
-// 토글 클릭 시 호출
-// - 활성화 → 비활성화 시도 : 토글 원복 후 모달 오픈
-// - 비활성화 → 활성화 : 즉시 활성화
 const onToggleQrPayment = (newVal: boolean) => {
   if (!newVal) {
     qrPaymentEnabled.value = true // 토글 원복
@@ -64,7 +36,6 @@ const onToggleQrPayment = (newVal: boolean) => {
   }
 }
 
-// 자식 컴포넌트(PaymentManagement 등)에서 inject 해서 사용
 provide('qrPaymentEnabled', qrPaymentEnabled)
 
 const drawerClick = (e: any) => {
@@ -83,20 +54,8 @@ const changeTabMenu = (menu: any) => {
 
 const alternateLink = (menuId: string) => {
   switch (menuId) {
-    case 'menuManagement':
-      return `/shop/${userInfo.shopInfo.shopCode}/category`
-    case 'shopManagement':
-      return `/shop/${userInfo.shopInfo.shopCode}/category`
-    case 'companyInfo':
-      return `/company/${userInfo.companyCode}`
-    case 'shopSetting':
-      return `/shopSetting/${userInfo.shopInfo.shopCode}`
     case 'orderInfo':
       return `/order/desktop/${userInfo.shopInfo.shopCode}`
-    case 'orderHistory':
-      return `/history/${userInfo.shopInfo.shopCode}`
-    case 'orderReport':
-      return `/report/order/${userInfo.shopInfo.shopCode}`
     case 'paymentHistory':
       return `/paymentHistory/${userInfo.shopInfo.shopCode}`
     default:
@@ -110,43 +69,14 @@ const doMenu = (menu: any) => {
   changeTabMenu(menu)
 }
 
-const closeApp = () => {
-  window.electronAPI.closeApp('close-app')
-}
-
-const maxApp = () => {
-  window.electronAPI.maxApp('max-app')
-}
-
-const minApp = () => {
-  window.electronAPI.minApp('min-app')
-}
-
 const logout = () => {
   if (shopInfo.value?.pg) {
     if (shopInfo.value?.posCode !== 'handorder') {
-      console.log('[Desktop Layout] 로그아웃 - SSE 완전히 리셋')
-      resetPgOrderSSE()
+      console.log('[Desktop Layout] 로그아웃')
     }
   }
 
   logUserOut()
-  if (isElectron()) {
-    window.electronAPI.logoutApp()
-  }
-}
-
-const getTimeFormat = (time:string) => {
-  // 20240520164250 ->  return HH:MM
-  return dayjs(time).format('HH:mm')
-}
-
-const getTotalPrice = (menuList:HoPrintLogVo[]) => {
-  let totalPrice = 0
-  menuList.forEach((order:HoPrintLogVo) => {
-    totalPrice += order.finalPrice
-  })
-  return priceToCurrency(totalPrice, shopInfo.value?.shopLanguage as string)
 }
 
 const closePopup = (val:boolean) => {
@@ -162,184 +92,20 @@ const closePopup = (val:boolean) => {
   }
 }
 
-const fetchOrderStatus = async () => {
-  if (isElectron()) {
-    try {
-      const status = await window.electronAPI.checkOrderServer()
-      orderStatus.value = status
-    } catch (error) {
-      orderStatus.value = 'fail'
-    }
-  }
-}
-
 onMounted(() => {
   console.log('DesktopApp mounted')
-  const checkElectron = typeof isElectron === 'function' ? isElectron() : false
-
-  if (checkElectron && typeof window !== 'undefined' && window.electronAPI) {
-    // Electron 첫 실행 감지 및 자동 새로고침 (order/desktop 또는 order/pg 경로일 때)
-    const hasRefreshed = sessionStorage.getItem('electron-refreshed')
-    const isOrderPage = route.path.includes('/order/desktop/') || route.path.includes('/order/pg')
-
-    if (!hasRefreshed && isOrderPage) {
-      sessionStorage.setItem('electron-refreshed', 'true')
-      window.location.reload()
-      return
-    }
-
-    // nextTick을 사용하여 DOM이 완전히 준비된 후 실행
-    nextTick(() => {
-      fetchOrderStatus()
-
-      // Electron IPC 리스너 등록
-      if (window.electronAPI && window.electronAPI.receiveMessage) {
-        window.electronAPI.receiveMessage(async (message: string) => {
-          try {
-            const orderData:HoPgOrderVo = JSON.parse(message)
-            const orderObject = {
-              ...orderData
-            }
-
-            if (orderObject.orderStatus.status === 'CANCEL' && newOrderList.value.length > 0) {
-              const cancelOrder = newOrderList.value.find((order: HoSalesVo) => order.printLogGroup.printGroupUuid === orderObject.printGroupUuid)
-              if (cancelOrder) {
-                cancelOrder.printLogGroup.orderStatus.status = 'CANCEL'
-                return
-              }
-            } else {
-              const orderLogData = await customFetch<HoPrintLogGroupVo>(`/handOrder/print/log/all?printGroupUuid=${orderObject.printGroupUuid}`, {
-                method: 'GET',
-                headers: {
-                  'Content-Type': 'application/json'
-                }
-              })
-              const orderMatch = newOrderList.value.find(order => order.printLogGroup.printGroupUuid === orderObject.printGroupUuid)
-              if (!orderMatch) {
-                addNewOrder({
-                  printLogGroup: {
-                    printGroupUuid: orderObject.printGroupUuid,
-                    tableSeq: orderObject.tableSeq,
-                    tableNum: orderObject.tableNum,
-                    tableName: orderObject.tableName,
-                    delivery: orderObject.delivery,
-                    takeOut: orderObject.takeOut,
-                    insDate: orderObject.insDate,
-                    printLog: orderObject.printLog,
-                    orderStatus: {
-                      ...orderObject.orderStatus,
-                      status: 'PENDING',
-                      orderNo: orderLogData.orderStatus.orderNo
-                    },
-                    orderNumber: orderLogData.orderStatus.orderNo,
-                    requestText: orderObject.printLog[0]?.requestText || '',
-                    cardApprNo: orderLogData.cardApprNo || ''
-                  },
-                  pgPaymentResult: orderObject.pgPaymentResult,
-                  shopInfo: orderObject.shopInfo
-                })
-              }
-
-              if (newOrderList.value.length > 0) { setOrder(newOrderList.value[0].printLogGroup) }
-            }
-
-            if (!orderPopup.value) {
-              orderPopup.value = true
-            }
-
-            if (!shopInfo.value?.acceptOrderButtonActive) {
-              const printDataObject = newOrderList.value!.find(orderValue => orderValue.printLogGroup.printGroupUuid === orderObject!.printGroupUuid)
-
-              const orderReceiptPrinterList = shopPrint.value?.filter((printer: PrinterVo) => printer.orderReceipt)
-
-              const printData = {
-                ...printDataObject?.printLogGroup,
-                printerList: orderReceiptPrinterList || [],
-                requestText: printDataObject?.printLogGroup.printLog[0]?.requestText,
-                riderRequestText: printDataObject?.printLogGroup.printLog[0]?.riderRequestText,
-                pgPaymentResult: printDataObject?.pgPaymentResult,
-                shopInfo: shopInfo.value,
-                printType: 'ORDERRECEIPT'
-              }
-              if (shopInfo.value?.usePrinter) {
-                window.electronAPI.printOrder(JSON.stringify(printData))
-              }
-              const orderLogData = await customFetch<HoPrintLogGroupVo>(`/handOrder/print/log/all?printGroupUuid=${orderData.printGroupUuid}`, {
-                method: 'GET',
-                headers: {
-                  'Content-Type': 'application/json'
-                }
-              })
-
-              if (orderLogData.orderStatus.orderNo === 0) {
-                // 0.5초 후 재조회 (주문번호가 0인 경우는 주문이 아직 완전히 처리되지 않은 상태일 수 있음)
-                const reData = await customFetch<HoPrintLogGroupVo>(`/handOrder/print/log/all?printGroupUuid=${orderData.printGroupUuid}`, {
-                  method: 'GET',
-                  headers: {
-                    'Content-Type': 'application/json'
-                  }
-                })
-                orderLogData.orderStatus.orderNo = reData.orderStatus.orderNo
-                console.log('재조회 결과:', reData)
-              }
-
-              const status = printDataObject?.pgPaymentResult ? 'CONFIRM' : 'COMPLETE'
-
-              await customFetch(`/admin/handOrder/order/${orderLogData.orderStatus.orderNo}/${status}`, {
-                method: 'PUT',
-                headers: {
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(shopInfo.value)
-              })
-
-              await customFetch(`/admin/handOrder/shop/table/${orderData.tableSeq}/${orderData.printGroupUuid}`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json'
-                }
-              })
-
-            // refreshNuxtData() 대신 현재 페이지의 데이터만 갱신
-            // 이벤트를 발생시켜 현재 페이지가 자체적으로 데이터를 갱신하도록 함
-            }
-            if (process.client) {
-              window.dispatchEvent(new CustomEvent('order-data-refresh'))
-            }
-          } catch (e) {
-            console.log(e)
-          }
-        })
-      }
-    })
-  }
 })
 
 </script>
 
 <template>
-  <template v-if="route.path.includes('/order/desktop') && shopInfo?.usagePurpose === 'PAYMENT_WINDOW'">
+  <template v-if="route.path.includes('/order/desktop')">
     <q-layout class="electron-layout">
       <q-header class="title-bar">
         <q-toolbar>
           <q-toolbar-title>
             <q-img src="/desktop_handorder_logo.png" width="113px" height="15px" />
           </q-toolbar-title>
-          <div class="order-status-box q-mr-lg">
-            <template v-if="orderStatus == 'success'">
-              <span>{{ $t('MAIN.011') }}</span>
-              <q-icon name="check" class="text-green" />
-            </template>
-            <template v-if="orderStatus == 'fail'">
-              <span>{{ $t('MAIN.012') }}</span>
-              <q-icon name="warning" class="color-red" />
-            </template>
-          </div>
-          <div class="q-pa-none icon-wrap">
-            <q-btn icon="remove" @click="minApp" />
-            <q-btn icon="filter_none" @click="maxApp" />
-            <q-btn icon="close" @click="closeApp" />
-          </div>
         </q-toolbar>
       </q-header>
       <q-page-container class="main-container">
@@ -365,22 +131,6 @@ onMounted(() => {
         <q-toolbar-title>
           <q-img src="/desktop_handorder_logo.png" width="113px" height="15px" />
         </q-toolbar-title>
-        <div class="order-status-box q-mr-lg">
-          <template v-if="orderStatus == 'success'">
-            <span>{{ $t('MAIN.011') }}</span>
-            <q-icon name="check" class="text-green" />
-          </template>
-          <template v-if="orderStatus == 'fail'">
-            <span>{{ $t('MAIN.012') }}</span>
-            <q-icon name="warning" class="color-red" />
-          </template>
-        </div>
-
-        <div class="q-pa-none icon-wrap">
-          <q-btn icon="remove" @click="minApp" />
-          <q-btn icon="filter_none" @click="maxApp" />
-          <q-btn icon="close" @click="closeApp" />
-        </div>
       </q-toolbar>
     </q-header>
 
@@ -393,17 +143,12 @@ onMounted(() => {
       :breakpoint="400"
     >
       <q-list padding class="menu-list">
-        <!-- QR 결제 토글 (에이전트 전용) -->
-        <div v-if="isElectron()" class="qr-payment-toggle-box">
+        <!-- QR 결제 토글 -->
+        <div class="qr-payment-toggle-box">
           <div class="qr-payment-toggle-inner">
             <div>
               <span class="qr-payment-label">QR 결제</span>
               <CustomToggle v-model="qrPaymentEnabled" @update:model-value="onToggleQrPayment" />
-              <!-- <q-toggle
-                v-model="qrPaymentEnabled"
-                color="orange"
-                @update:model-value="onToggleQrPayment"
-              /> -->
             </div>
             <p class="qr-payment-status" :class="qrPaymentEnabled ? 'active' : 'inactive'">
               {{ qrPaymentEnabled ? '결제 등록이 활성화 되었습니다.' : '결제 등록이 꺼진 상태입니다.' }}
@@ -517,7 +262,6 @@ onMounted(() => {
   .title-bar{
     position: relative;
     background:  var(--handorder-color);
-    -webkit-app-region: drag;
 
     .icon-wrap{
       >*{
@@ -866,6 +610,7 @@ onMounted(() => {
   font-weight: 600;
   line-height: normal;
   margin: 0 auto;
+  padding: 0;
   .menu-title {
     color: #5c5c5c;
   }
