@@ -41,6 +41,13 @@ const browserLogin = async () => {
     await nextTick()
 
     const userInfoData = data as AdminMemberVo
+
+    if (userInfoData.role !== 'ROLE_OWNER') {
+      alert('매장 계정으로 로그인 해주세요.')
+      logUserOut()
+      return
+    }
+
     const shopCode = userInfoData.shopInfo?.shopCode || null
     if (shopCode) {
       // 매장 정보 조회 후 나이스페이 사용 가능 여부 확인
