@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import isElectron from 'is-electron'
 import { useAuthStore } from '~/store/auth'
 import { customFetch } from '~/composables/customFetch'
 import type { AdminMemberVo } from '~/types'
 
-const { authenticateUser, setUserInfo, authenticateDesktopUser } = useAuthStore()
+const { authenticateUser, setUserInfo, authenticateDesktopUser, logUserOut } = useAuthStore()
 
 const { authenticated } = storeToRefs(useAuthStore())
 
@@ -21,14 +20,6 @@ const user = ref({
 })
 
 const router = useRouter()
-
-const login = async () => {
-  if (isElectron()) {
-    await electronLogin()
-  } else {
-    await browserLogin()
-  }
-}
 
 const browserLogin = async () => {
   // 로그인 시도 전에 모든 Nuxt 캐시 초기화 (SSR 포함)
@@ -52,6 +43,30 @@ const browserLogin = async () => {
     const userInfoData = data as AdminMemberVo
     const shopCode = userInfoData.shopInfo?.shopCode || null
     if (shopCode) {
+      // 매장 정보 조회 후 나이스페이 사용 가능 여부 확인
+      const shopData = await customFetch(`/admin/handOrder/shop/${shopCode}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      }) as any
+
+      if (!shopData?.niceLinkPayInfo || !shopData?.nicePayUse) {
+        alert('나이스링크페이 결제 설정이 되어있지 않습니다.')
+        logUserOut()
+        return
+      }
+
+      if (shopData?.usagePurpose !== 'ALL') {
+        alert('에이전트 설정이 모두로 되어있어야 합니다.')
+        logUserOut()
+        return
+      }
+
+      if (!shopData?.pg) {
+        alert('매장 설정이 선불로 적용되어야 합니다.')
+        logUserOut()
+        return
+      }
+
       await router.push(`/order/desktop/${shopCode}`)
     } else {
       await router.push('/login')
@@ -65,32 +80,6 @@ const browserLogin = async () => {
   }
 }
 
-const electronLogin = async () => {
-  // 로그인 시도 전에 모든 Nuxt 캐시 초기화 (SSR 포함)
-  clearNuxtData()
-
-  await authenticateDesktopUser(user.value)
-  if (authenticated.value) {
-    // 토큰이 완전히 설정될 때까지 대기
-    await nextTick()
-
-    const data = await customFetch('/admin/handOrder/user-info', {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    })
-    setUserInfo(data as AdminMemberVo)
-
-    // 상태 업데이트 완료 대기
-    await nextTick()
-
-    const { value } = useCookie('token')
-    const userInfo = data as AdminMemberVo
-    const shopCode = userInfo.shopInfo ? userInfo?.shopInfo.shopCode : null
-    await window.electronAPI.loginApp(value, shopCode)/**/
-    userInfo.userType === 'admin' ? await router.push('/order') : await router.push('/order/desktop/' + userInfo.shopInfo.shopCode)
-  }
-}
-
 </script>
 
 <template>
@@ -101,7 +90,7 @@ const electronLogin = async () => {
         <q-img src="handorder_logo_y.png" width="180px" height="97px" fit="scale-down" />
       </q-card-section>
       <q-card-section class="q-mt-lg flex justify-center">
-        <q-form class="login-form" @submit="login">
+        <q-form class="login-form" @submit="browserLogin">
           <div class="q-mb-sm column">
             <span class="form-text q-mb-sm">{{ $t('LOGIN.001') }}</span>
             <q-input
