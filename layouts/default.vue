@@ -26,7 +26,9 @@ const drawerClick = () => {
 provide('sidebarMiniState', miniState)
 
 const logout = () => {
-  logUserOut()
+  if (window.confirm('로그아웃 하시겠습니까?')) {
+    logUserOut()
+  }
 }
 
 const nuxtApp = useNuxtApp()
